@@ -44,14 +44,12 @@ class SmartIdController extends Controller
 
     public function callback(Request $request)
     {
-        // Tangani jika user menolak akses (deny)
         if ($request->has('error')) {
             return redirect('/')
                 ->with('error', $request->get('error_description', 'Akses ditolak'));
         }
 
         $state = $request->session()->pull('state');
-
         if (strlen($state) === 0 || $state !== $request->state) {
             abort(403, 'Invalid state');
         }
@@ -68,10 +66,45 @@ class SmartIdController extends Controller
             abort(500, 'Failed to get token');
         }
 
-        session(['access_token' => $response->json()['access_token']]);
+        $token = $response->json()['access_token'];
+        session(['access_token' => $token]);
 
-        return redirect()->route('home');
+        $userInfo = Http::withToken($token)
+            ->timeout(10)
+            ->get(env('SMARTID_AUTH_URL') . '/api/user')
+            ->json();
+
+        // 🌟 Coba cocokkan berdasarkan smartid_id (utamakan ini jika aktif)
+        $user = null;
+
+        // pake Nomer induk
+        // $user = User::where('smartid_id', $userInfo['id'])->first();
+
+        // Jika tidak ditemukan, coba cocokkan via email
+        if (!$user) {
+            $user = User::where('email', $userInfo['email'])->first();
+
+            if ($user) {
+                // Optional: save smartid_id 
+                // $user->smartid_id = $userInfo['id'];
+                // $user->save();
+            } else {
+                // Buat user baru
+                $user = User::create([
+                    'name' => $userInfo['name'],
+                    'email' => $userInfo['email'],
+                    // 'smartid_id' => $userInfo['id'], // bisa diaktifkan nanti
+                    'password' => bcrypt(Str::random(40)),
+                ]);
+            }
+        }
+
+
+
+        Auth::login($user);
+        return redirect('/admin');
     }
+
 
 
     public function clientHome()
@@ -114,6 +147,6 @@ class SmartIdController extends Controller
         Auth::logout();
 
         $logoutUrl = env('SMARTID_AUTH_URL') . '/logout?redirect_uri=' . urlencode(url('/'));
-        return redirect($logoutUrl);
+        return redirect($logoutUrl); // balik ke portal atau halaman utama
     }
 }
