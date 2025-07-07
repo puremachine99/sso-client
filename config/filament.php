@@ -97,17 +97,6 @@ return [
     */
 
     'system_route_prefix' => '',
-    'auth' => [
-        'guard' => 'web',
 
-        'pages' => [
-            'login' => '/',
-        ],
-
-        'logout' => [
-            'url' => '/logout-all',
-            'method' => 'GET',
-        ],
-    ],
 
 ];

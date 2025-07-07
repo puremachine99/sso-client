@@ -76,10 +76,5 @@ return [
     'links' => [
         public_path('storage') => storage_path('app/public'),
     ],
-    'auth' => [
-        'guard' => 'web',
-        'pages' => [
-            'login' => null, // Nonaktifkan login default
-        ],
-    ],
+   
 ];
